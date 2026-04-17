@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import mongoose from "mongoose";
 import authRoutes from "./routes/authRoutes.js";
+import bookingRoutes from "./routes/bookingRoutes.js";
 import workerRoutes from "./routes/workerRoutes.js";
 
 const app = express();
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/workers", workerRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 app.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok" });
