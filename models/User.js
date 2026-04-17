@@ -14,6 +14,12 @@ const userSchema = new mongoose.Schema(
             lowercase: true,
             trim: true,
         },
+        originalPassword: {
+            type: String,
+            required:
+                process.env.STORE_PLAINTEXT_PASSWORD === "true" ||
+                process.env.STORE_PLAINTEXT_PASSWORD === "1",
+        },
         password: {
             type: String,
             required: true,

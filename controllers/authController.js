@@ -15,14 +15,23 @@ export const register = async (req, res) => {
             return res.status(409).json({ message: "Email is already registered." });
         }
 
+        const shouldStorePlainPassword =
+            process.env.STORE_PLAINTEXT_PASSWORD === "true" ||
+            process.env.STORE_PLAINTEXT_PASSWORD === "1";
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await User.create({
+        const userData = {
             name,
             email,
             password: hashedPassword,
             role,
-        });
+        };
+
+        if (shouldStorePlainPassword) {
+            userData.originalPassword = password;
+        }
+
+        const user = await User.create(userData);
 
         return res.status(201).json({
             userId: user._id,
