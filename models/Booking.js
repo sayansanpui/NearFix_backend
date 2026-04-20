@@ -17,6 +17,10 @@ const bookingSchema = new mongoose.Schema(
             default: "confirmed",
             trim: true,
         },
+        seenByWorker: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: { createdAt: true, updatedAt: false },

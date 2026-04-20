@@ -36,6 +36,10 @@ const workerSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
+        availability: {
+            type: Boolean,
+            default: true,
+        },
         rating: {
             type: Number,
             default: 0,

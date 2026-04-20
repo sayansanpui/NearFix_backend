@@ -1,10 +1,11 @@
 import express from "express";
-import { getMessages, sendMessage } from "../controllers/messageController.js";
-import auth from "../middleware/auth.js";
+import { getMessages, getUnreadCount, sendMessage } from "../controllers/messageController.js";
+import auth, { authorizeRoles } from "../middleware/auth.js";
 
 const router = express.Router();
 
 router.post("/", auth, sendMessage);
-router.get("/:bookingId", getMessages);
+router.get("/unread-count", auth, authorizeRoles("worker"), getUnreadCount);
+router.get("/:bookingId", auth, getMessages);
 
 export default router;
