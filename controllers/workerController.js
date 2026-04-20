@@ -1,5 +1,18 @@
 import Worker from "../models/Worker.js";
 
+function getDistance(lat1, lon1, lat2, lon2) {
+    const toRad = (v) => (v * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) ** 2;
+
+    return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 export const createWorker = async (req, res) => {
     try {
         const userRole = req.user?.role;
@@ -36,7 +49,55 @@ export const createWorker = async (req, res) => {
 export const getAllWorkers = async (req, res) => {
     try {
         const workers = await Worker.find();
-        return res.status(200).json(workers);
+
+        const { lat, lng } = req.query;
+        const hasLat = lat !== undefined;
+        const hasLng = lng !== undefined;
+
+        if (!hasLat && !hasLng) {
+            return res.status(200).json(workers);
+        }
+
+        if (hasLat !== hasLng) {
+            return res.status(400).json({
+                message: "Both lat and lng query params are required for distance sorting.",
+            });
+        }
+
+        const userLat = Number(lat);
+        const userLng = Number(lng);
+
+        if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) {
+            return res.status(400).json({
+                message: "lat and lng must be valid numbers.",
+            });
+        }
+
+        const workersWithDistance = workers
+            .map((worker) => {
+                const workerObj = worker.toObject();
+                const workerLat = workerObj.location?.lat;
+                const workerLng = workerObj.location?.lng;
+
+                if (!Number.isFinite(workerLat) || !Number.isFinite(workerLng)) {
+                    return {
+                        ...workerObj,
+                        distance: null,
+                    };
+                }
+
+                return {
+                    ...workerObj,
+                    distance: getDistance(userLat, userLng, workerLat, workerLng),
+                };
+            })
+            .sort((a, b) => {
+                if (a.distance === null) return 1;
+                if (b.distance === null) return -1;
+                return a.distance - b.distance;
+            });
+
+        return res.status(200).json(workersWithDistance);
     } catch (error) {
         console.error("Get all workers error:", error);
         return res.status(500).json({ message: "Failed to fetch workers." });

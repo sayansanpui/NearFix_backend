@@ -141,6 +141,80 @@ export const getWorkerBookingNotificationCount = async (req, res) => {
     }
 };
 
+export const updateBookingStatus = async (req, res) => {
+    try {
+        const authUserId = req.user?.userId;
+        const authRole = req.user?.role;
+
+        if (!authUserId) {
+            return res.status(401).json({ message: "Unauthorized." });
+        }
+
+        if (authRole !== "worker") {
+            return res.status(403).json({ message: "Only workers can update booking status." });
+        }
+
+        const { id: bookingId } = req.params;
+        const { status } = req.body || {};
+
+        if (!bookingId) {
+            return res.status(400).json({ message: "bookingId is required." });
+        }
+
+        if (!mongoose.isValidObjectId(bookingId)) {
+            return res.status(400).json({ message: "Invalid bookingId." });
+        }
+
+        const allowedStatuses = new Set(["pending", "accepted", "rejected", "completed"]);
+        if (typeof status !== "string" || !allowedStatuses.has(status)) {
+            return res.status(400).json({
+                message: "status must be one of: pending, accepted, rejected, completed.",
+            });
+        }
+
+        const workerProfile = await Worker.findOne({ userId: authUserId }).select("_id");
+        if (!workerProfile) {
+            return res.status(404).json({ message: "Worker profile not found." });
+        }
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found." });
+        }
+
+        if (!isSameId(booking.workerId, workerProfile._id)) {
+            return res.status(403).json({ message: "Forbidden." });
+        }
+
+        const allowedTransitions = {
+            confirmed: new Set(["accepted", "rejected"]),
+            pending: new Set(["accepted", "rejected"]),
+            accepted: new Set(["completed"]),
+            rejected: new Set(),
+            completed: new Set(),
+        };
+
+        const currentStatus = booking.status === "confirmed" ? "pending" : booking.status;
+        const nextAllowedStatuses = allowedTransitions[booking.status] || allowedTransitions[currentStatus] || new Set();
+        if (!nextAllowedStatuses.has(status)) {
+            return res.status(400).json({
+                message: `Invalid status transition from ${booking.status} to ${status}.`,
+            });
+        }
+
+        booking.status = status;
+        await booking.save();
+
+        return res.status(200).json({
+            message: "Booking status updated successfully.",
+            booking,
+        });
+    } catch (error) {
+        console.error("Update booking status error:", error);
+        return res.status(500).json({ message: "Failed to update booking status." });
+    }
+};
+
 export const getBookingParticipants = async (req, res) => {
     try {
         const authUserId = req.user?.userId;
