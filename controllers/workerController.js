@@ -180,18 +180,23 @@ export const updateAvailability = async (req, res) => {
             return res.status(403).json({ message: "Only workers can update availability." });
         }
 
-        const worker = await Worker.findOne({ userId: req.user.userId });
+        const { availability } = req.body || {};
+        if (typeof availability !== "boolean") {
+            return res.status(400).json({ message: "availability must be true or false." });
+        }
+
+        const worker = await Worker.findOneAndUpdate(
+            { userId: req.user.userId },
+            { availability },
+            { new: true }
+        );
 
         if (!worker) {
             return res.status(404).json({ message: "Worker profile not found." });
         }
 
-        worker.availability = !worker.availability;
-        await worker.save();
-
         return res.status(200).json({
             message: "Availability updated successfully.",
-            availability: worker.availability,
             worker,
         });
     } catch (error) {
